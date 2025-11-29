@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Medical Consultation - Login & Register</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;background:#f4f6f8;color:#111}
+    header{background:#0b5ed7;color:white;padding:12px 20px}
+    main{padding:18px;max-width:1100px;margin:18px auto}
+    .card{background:white;border-radius:10px;padding:14px;box-shadow:0 2px 6px rgba(0,0,0,0.08);margin:12px 0}
+    input,select,textarea,button{font-size:14px;padding:8px;border-radius:6px;border:1px solid #d0d7de}
+    button{background:#0b5ed7;color:white;border:none;cursor:pointer}
+    button:hover{background:#0a58ca}
+    .grid{display:grid;gap:12px}
+    .row{display:flex;gap:10px}
+    .muted{color:#6b7280;font-size:13px}
+  </style>
+</head>
+<body>
+  <header>
+    <strong>MEDF-PS20 — Medical Consultation Prototype</strong>
+  </header>
+
+  <main>
+    <section class="card">
+      <h3>Sign in / Register</h3>
+      <div class="grid">
+        <div class="row">
+          <div style="flex:1">
+            <h4>Login</h4>
+            <input id="loginEmail" placeholder="Email" />
+            <input id="loginPassword" type="password" placeholder="Password" style="margin-top:8px" />
+            <select id="loginRole" style="margin-top:8px">
+              <option value="patient">Patient</option>
+              <option value="doctor">Doctor</option>
+              <option value="admin">Admin</option>
+              <option value="pharmacist">Pharmacist</option>
+            </select>
+            <div style="margin-top:8px">
+              <button onclick="login()">Login</button>
+            </div>
+          </div>
+          <div style="flex:1">
+            <h4>Register</h4>
+            <input id="regName" placeholder="Full name" />
+            <input id="regEmail" placeholder="Email" style="margin-top:8px" />
+            <input id="regPassword" type="password" placeholder="Password" style="margin-top:8px" />
+            <select id="regRole" style="margin-top:8px">
+              <option value="patient">Patient</option>
+              <option value="doctor">Doctor</option>
+              <option value="admin">Admin</option>
+              <option value="pharmacist">Pharmacist</option>
+            </select>
+            <div style="margin-top:8px">
+              <button onclick="registerUser()">Register</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="muted">This is a frontend-only prototype that uses <code>localStorage</code> to simulate users, appointments, prescriptions and payments.</p>
+      <div style="margin-top:20px;padding:12px;background:#e6f2ff;border-radius:6px">
+        <strong>Demo Credentials:</strong>
+        <ul style="margin:6px 0;padding-left:20px">
+          <li>Admin: admin@medf.test / admin</li>
+          <li>Doctor: alice@medf.test / doctor</li>
+          <li>Patient: bob@medf.test / patient</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+  <script src="shared.js"></script>
+  <script>
+    function registerUser(){
+      const name=document.getElementById('regName').value.trim()
+      const email=document.getElementById('regEmail').value.trim()
+      const pass=document.getElementById('regPassword').value
+      const role=document.getElementById('regRole').value
+      if(!name||!email||!pass){alert('Please fill fields');return}
+      if(findUserByEmail(email)){alert('User with this email exists');return}
+      const users=load(DB_USERS_KEY)
+      const u={id:uid(),name,email,password:pass,role}
+      users.push(u); save(DB_USERS_KEY, users)
+      alert('Registered. You can login now.')
+      document.getElementById('regName').value=''
+      document.getElementById('regEmail').value=''
+      document.getElementById('regPassword').value=''
+    }
+
+    function login(){
+      const email=document.getElementById('loginEmail').value.trim()
+      const pass=document.getElementById('loginPassword').value
+      const role=document.getElementById('loginRole').value
+      const user=load(DB_USERS_KEY).find(u=>u.email===email && u.password===pass && u.role===role)
+      if(!user){alert('Invalid credentials for selected role');return}
+      sessionStorage.setItem('medf_current', JSON.stringify(user))
+      // Redirect to appropriate dashboard
+      if(role==='patient') window.location.href='patient-dashboard.html'
+      else if(role==='doctor') window.location.href='doctor-dashboard.html'
+      else if(role==='admin') window.location.href='admin-dashboard.html'
+      else if(role==='pharmacist') window.location.href='pharmacist-dashboard.html'
+    }
+
+    // If already logged in, redirect
+    if(getCurrent()){
+      const user = getCurrent()
+      if(user.role==='patient') window.location.href='patient-dashboard.html'
+      else if(user.role==='doctor') window.location.href='doctor-dashboard.html'
+      else if(user.role==='admin') window.location.href='admin-dashboard.html'
+      else if(user.role==='pharmacist') window.location.href='pharmacist-dashboard.html'
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+body {
+  font-family: system-ui, Segoe UI, Roboto, Arial;
+  margin: 0;
+  background: #f4f6f8;
+  color: #111;
+}
+
+header {
+  background: #0b5ed7;
+  color: white;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+main {
+  padding: 18px;
+  max-width: 1200px;
+  margin: 18px auto;
+}
+
+.card {
+  background: white;
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  margin: 12px 0;
+}
+
+input, select, textarea {
+  font-size: 14px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #d0d7de;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+button {
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #0b5ed7;
+  color: white;
+  cursor: pointer;
+  margin-right: 8px;
+  margin-top: 8px;
+}
+
+button:hover {
+  background: #0a58ca;
+}
+
+button.logout {
+  background: #dc3545;
+}
+
+button.logout:hover {
+  background: #c82333;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+}
+
+.row > div {
+  flex: 1;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+th, td {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+
+th {
+  background: #f8f9fa;
+  font-weight: 600;
+}
+
+tr:hover {
+  background: #f8f9fa;
+}
+
+.muted {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.badge-approved {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.badge-completed {
+  background: #d4edda;
+  color: #155724;
+}
+
+.badge-rejected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.badge-patient {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.badge-doctor {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.badge-admin {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.badge-pharmacist {
+  background: #e8f5e9;
+  color: #388e3c;
+}
+
+label {
+  display: block;
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+.grid {
+  display: grid;
+  gap: 12px;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}

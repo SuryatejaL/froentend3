@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Doctor Dashboard</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;background:#f4f6f8;color:#111}
+    header{background:#0b5ed7;color:white;padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
+    header h1{margin:0;font-size:18px}
+    main{padding:18px;max-width:1100px;margin:18px auto}
+    .card{background:white;border-radius:10px;padding:14px;box-shadow:0 2px 6px rgba(0,0,0,0.08);margin:12px 0}
+    .appt-card{background:#f8f9fa;border-left:4px solid #0b5ed7;padding:12px;margin:10px 0;border-radius:6px}
+    button{font-size:14px;padding:8px 12px;border-radius:6px;border:none;background:#0b5ed7;color:white;cursor:pointer;margin-right:8px;margin-top:8px}
+    button:hover{background:#0a58ca}
+    button.logout{background:#dc3545}
+    button.logout:hover{background:#c82333}
+    .row{display:flex;gap:10px}
+    .row > div{flex:1}
+    .muted{color:#6b7280;font-size:13px}
+    .badge{display:inline-block;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:500}
+    .badge-pending{background:#fff3cd;color:#856404}
+    .badge-approved{background:#d1ecf1;color:#0c5460}
+    .badge-completed{background:#d4edda;color:#155724}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>MEDF-PS20 — Doctor Dashboard</h1>
+    <div>
+      <strong id="userName"></strong>&nbsp;&nbsp;
+      <button class="logout" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h3>⏳ Pending Appointments</h3>
+      <div id="doctorPending"></div>
+    </section>
+
+    <section class="card">
+      <h3>✅ Approved / Completed Appointments</h3>
+      <div id="doctorHistory"></div>
+    </section>
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    // Require authentication
+    const user = requireAuth()
+    if(user.role !== 'doctor'){
+      alert('Access denied')
+      logout()
+    }
+    document.getElementById('userName').innerText = user.name
+
+    function renderDoctorPending(){
+      const appts = load(DB_APPTS_KEY).filter(a=>a.doctorId===user.id && a.status==='pending')
+      const container=document.getElementById('doctorPending')
+      container.innerHTML=''
+      if(appts.length===0){
+        container.innerHTML='<p class="muted">No pending appointments</p>'
+        return
+      }
+      appts.forEach(a=>{
+        const patient = load(DB_USERS_KEY).find(u=>u.id===a.patientId)
+        const div=document.createElement('div')
+        div.className='appt-card'
+        div.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:start">
+            <div style="flex:1">
+              <strong>${patient?patient.name:'(patient)'}</strong>
+              <p class="muted" style="margin:4px 0">${new Date(a.datetime).toLocaleString()}</p>
+              <p style="margin:8px 0"><strong>Reason:</strong> ${a.reason}</p>
+              <span class="badge badge-pending">Pending Approval</span>
+            </div>
+            <div>
+              <button onclick="approveAndSend('${a.id}')">✓ Approve & Send Link</button>
+            </div>
+          </div>
+        `
+        container.appendChild(div)
+      })
+    }
+
+    function approveAndSend(apptId){
+      const appts = load(DB_APPTS_KEY)
+      const a = appts.find(x=>x.id===apptId)
+      if(!a) return alert('Not found')
+      a.status='approved'
+      a.videoLink = 'https://meet.example.com/'+uid()
+      save(DB_APPTS_KEY, appts)
+      alert('Approved! Video link: '+a.videoLink)
+      renderDoctorPending()
+      renderDoctorHistory()
+    }
+
+    function renderDoctorHistory(){
+      const appts = load(DB_APPTS_KEY).filter(a=>a.doctorId===user.id && (a.status==='approved' || a.status==='completed'))
+      const container=document.getElementById('doctorHistory')
+      container.innerHTML=''
+      if(appts.length===0){
+        container.innerHTML='<p class="muted">No approved/completed appointments</p>'
+        return
+      }
+      appts.forEach(a=>{
+        const patient = load(DB_USERS_KEY).find(u=>u.id===a.patientId)
+        const div=document.createElement('div')
+        div.className='appt-card'
+        const statusBadge = a.status==='approved'?'<span class="badge badge-approved">Approved</span>':'<span class="badge badge-completed">Completed</span>'
+        div.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:start">
+            <div style="flex:1">
+              <strong>${patient?patient.name:'(patient)'}</strong>
+              <p class="muted" style="margin:4px 0">${new Date(a.datetime).toLocaleString()}</p>
+              <p style="margin:8px 0"><strong>Reason:</strong> ${a.reason}</p>
+              ${statusBadge}
+              ${a.videoLink?'<p style="margin:8px 0"><a href="'+a.videoLink+'" target="_blank" style="color:#0b5ed7">📹 Video Call Link</a></p>':''}
+            </div>
+            <div>
+              <button onclick="writePrescription('${a.id}')">📝 Prescription</button>
+              <button onclick="markCompleted('${a.id}')" style="background:#28a745">✓ Complete</button>
+            </div>
+          </div>
+        `
+        container.appendChild(div)
+      })
+    }
+
+    function writePrescription(apptId){
+      const text = prompt('Enter prescription text (medications, dosages, instructions):')
+      if(!text) return
+      const prescs = load(DB_PRESC_KEY)
+      const id = uid()
+      prescs.push({id,apptId,text,createdAt:Date.now(),dispensed:false})
+      save(DB_PRESC_KEY, prescs)
+      // Link to appointment
+      const appts = load(DB_APPTS_KEY)
+      const a = appts.find(x=>x.id===apptId)
+      if(a){
+        a.prescriptionId=id
+        save(DB_APPTS_KEY, appts)
+      }
+      alert('Prescription saved!')
+      renderDoctorHistory()
+    }
+
+    function markCompleted(apptId){
+      const appts = load(DB_APPTS_KEY)
+      const a = appts.find(x=>x.id===apptId)
+      if(!a) return
+      a.status='completed'
+      save(DB_APPTS_KEY, appts)
+      alert('Appointment marked as completed')
+      renderDoctorHistory()
+    }
+
+    // Initialize
+    renderDoctorPending()
+    renderDoctorHistory()
+  </script>
+</body>
+</html>

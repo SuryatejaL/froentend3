@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin Dashboard</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;background:#f4f6f8;color:#111}
+    header{background:#0b5ed7;color:white;padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
+    header h1{margin:0;font-size:18px}
+    main{padding:18px;max-width:1200px;margin:18px auto}
+    .card{background:white;border-radius:10px;padding:14px;box-shadow:0 2px 6px rgba(0,0,0,0.08);margin:12px 0}
+    button{font-size:14px;padding:8px 12px;border-radius:6px;border:none;background:#0b5ed7;color:white;cursor:pointer}
+    button:hover{background:#0a58ca}
+    button.logout{background:#dc3545;margin-left:8px}
+    button.logout:hover{background:#c82333}
+    button.danger{background:#dc3545}
+    button.danger:hover{background:#c82333}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
+    th{background:#f8f9fa;font-weight:600}
+    tr:hover{background:#f8f9fa}
+    .muted{color:#6b7280;font-size:13px}
+    .badge{display:inline-block;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:500}
+    .badge-patient{background:#e3f2fd;color:#1976d2}
+    .badge-doctor{background:#f3e5f5;color:#7b1fa2}
+    .badge-admin{background:#fff3e0;color:#e65100}
+    .badge-pharmacist{background:#e8f5e9;color:#388e3c}
+    .badge-pending{background:#fff3cd;color:#856404}
+    .badge-approved{background:#d1ecf1;color:#0c5460}
+    .badge-completed{background:#d4edda;color:#155724}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:10px 0}
+    .stat-box{background:#f8f9fa;padding:12px;border-radius:6px;border-left:4px solid #0b5ed7;text-align:center}
+    .stat-box h3{margin:0;font-size:24px;color:#0b5ed7}
+    .stat-box p{margin:4px 0;color:#6b7280;font-size:12px}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>MEDF-PS20 — Admin Dashboard</h1>
+    <div>
+      <strong>Admin</strong>&nbsp;&nbsp;
+      <button class="logout" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h3>📊 Overview</h3>
+      <div class="stats">
+        <div class="stat-box">
+          <h3 id="totalUsers">0</h3>
+          <p>Total Users</p>
+        </div>
+        <div class="stat-box">
+          <h3 id="totalAppts">0</h3>
+          <p>Total Appointments</p>
+        </div>
+        <div class="stat-box">
+          <h3 id="pendingAppts">0</h3>
+          <p>Pending Approvals</p>
+        </div>
+        <div class="stat-box">
+          <h3 id="totalRx">0</h3>
+          <p>Total Prescriptions</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>👥 User Management</h3>
+      <div id="adminUsers"></div>
+    </section>
+
+    <section class="card">
+      <h3>📅 All Appointments</h3>
+      <div id="adminAppts"></div>
+    </section>
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    // Require authentication
+    const user = requireAuth()
+    if(user.role !== 'admin'){
+      alert('Access denied')
+      logout()
+    }
+
+    function updateStats(){
+      const users = load(DB_USERS_KEY)
+      const appts = load(DB_APPTS_KEY)
+      const prescs = load(DB_PRESC_KEY)
+      const pendingAppts = appts.filter(a=>a.status==='pending').length
+
+      document.getElementById('totalUsers').innerText = users.length
+      document.getElementById('totalAppts').innerText = appts.length
+      document.getElementById('pendingAppts').innerText = pendingAppts
+      document.getElementById('totalRx').innerText = prescs.length
+    }
+
+    function renderAdminUsers(){
+      const users=load(DB_USERS_KEY)
+      const container=document.getElementById('adminUsers')
+      container.innerHTML=''
+      if(users.length===0){
+        container.innerHTML='<p class="muted">No users</p>'
+        return
+      }
+      const table=document.createElement('table')
+      table.innerHTML='<tr><th>Name</th><th>Email</th><th>Role</th><th>Registered</th><th>Actions</th></tr>'
+      users.forEach(u=>{
+        const tr=document.createElement('tr')
+        let badge=''
+        if(u.role==='patient') badge='<span class="badge badge-patient">Patient</span>'
+        else if(u.role==='doctor') badge='<span class="badge badge-doctor">Doctor</span>'
+        else if(u.role==='admin') badge='<span class="badge badge-admin">Admin</span>'
+        else if(u.role==='pharmacist') badge='<span class="badge badge-pharmacist">Pharmacist</span>'
+        tr.innerHTML=`<td><strong>${u.name}</strong></td><td>${u.email}</td><td>${badge}</td><td class="muted">Soon</td><td><button class="danger" onclick="adminDeleteUser('${u.id}')">Delete</button></td>`
+        table.appendChild(tr)
+      })
+      container.appendChild(table)
+    }
+
+    function adminDeleteUser(id){
+      if(!confirm('Delete this user? This will also remove all their appointments and related data.')) return
+      let users=load(DB_USERS_KEY)
+      users = users.filter(u=>u.id!==id)
+      save(DB_USERS_KEY, users)
+      
+      let appts=load(DB_APPTS_KEY)
+      appts = appts.filter(a=>a.patientId!==id && a.doctorId!==id)
+      save(DB_APPTS_KEY, appts)
+      
+      let presc=load(DB_PRESC_KEY)
+      presc=presc.filter(p=>{
+        const a=load(DB_APPTS_KEY).find(x=>x.id===p.apptId)
+        return !!a
+      })
+      save(DB_PRESC_KEY, presc)
+      
+      alert('User deleted successfully')
+      renderAdminUsers()
+      renderAdminAppts()
+      updateStats()
+    }
+
+    function renderAdminAppts(){
+      const appts = load(DB_APPTS_KEY)
+      const container=document.getElementById('adminAppts')
+      container.innerHTML=''
+      if(appts.length===0){
+        container.innerHTML='<p class="muted">No appointments</p>'
+        return
+      }
+      const table=document.createElement('table')
+      table.innerHTML='<tr><th>Patient</th><th>Doctor</th><th>Date & Time</th><th>Status</th><th>Paid</th><th>Actions</th></tr>'
+      appts.forEach(a=>{
+        const p=load(DB_USERS_KEY).find(u=>u.id===a.patientId)
+        const d=load(DB_USERS_KEY).find(u=>u.id===a.doctorId)
+        const tr=document.createElement('tr')
+        let statusBadge=''
+        if(a.status==='pending') statusBadge='<span class="badge badge-pending">Pending</span>'
+        else if(a.status==='approved') statusBadge='<span class="badge badge-approved">Approved</span>'
+        else if(a.status==='completed') statusBadge='<span class="badge badge-completed">Completed</span>'
+        const paidBadge=a.paid?'<span style="color:#155724">✓ Yes</span>':'<span style="color:#9b1c1c">✗ No</span>'
+        tr.innerHTML = `<td>${p?p.name:'(deleted)'}</td><td>${d?d.name:'(deleted)'}</td><td>${new Date(a.datetime).toLocaleString()}</td><td>${statusBadge}</td><td>${paidBadge}</td><td><button class="danger" onclick="adminDeleteAppt('${a.id}')">Delete</button></td>`
+        table.appendChild(tr)
+      })
+      container.appendChild(table)
+    }
+
+    function adminDeleteAppt(id){
+      if(!confirm('Delete this appointment?')) return
+      let appts=load(DB_APPTS_KEY)
+      appts=appts.filter(a=>a.id!==id)
+      save(DB_APPTS_KEY,appts)
+      alert('Appointment deleted')
+      renderAdminAppts()
+      updateStats()
+    }
+
+    // Initialize
+    updateStats()
+    renderAdminUsers()
+    renderAdminAppts()
+  </script>
+</body>
+</html>

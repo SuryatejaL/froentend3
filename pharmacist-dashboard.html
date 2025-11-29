@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pharmacist Dashboard</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;background:#f4f6f8;color:#111}
+    header{background:#0b5ed7;color:white;padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
+    header h1{margin:0;font-size:18px}
+    main{padding:18px;max-width:1100px;margin:18px auto}
+    .card{background:white;border-radius:10px;padding:14px;box-shadow:0 2px 6px rgba(0,0,0,0.08);margin:12px 0}
+    .rx-card{background:#f8f9fa;border-left:4px solid #17a2b8;padding:12px;margin:10px 0;border-radius:6px}
+    button{font-size:14px;padding:8px 12px;border-radius:6px;border:none;background:#0b5ed7;color:white;cursor:pointer;margin-right:8px;margin-top:8px}
+    button:hover{background:#0a58ca}
+    button.logout{background:#dc3545}
+    button.logout:hover{background:#c82333}
+    button.success{background:#28a745}
+    button.success:hover{background:#218838}
+    .muted{color:#6b7280;font-size:13px}
+    .badge{display:inline-block;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:500}
+    .badge-pending{background:#fff3cd;color:#856404}
+    .badge-dispensed{background:#d4edda;color:#155724}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>MEDF-PS20 — Pharmacist Dashboard</h1>
+    <div>
+      <strong id="userName"></strong>&nbsp;&nbsp;
+      <button class="logout" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h3>💊 Prescriptions to Dispense</h3>
+      <div id="prescriptionsList"></div>
+    </section>
+  </main>
+
+  <script src="shared.js"></script>
+  <script>
+    // Require authentication
+    const user = requireAuth()
+    if(user.role !== 'pharmacist'){
+      alert('Access denied')
+      logout()
+    }
+    document.getElementById('userName').innerText = user.name
+
+    function renderPrescriptions(){
+      const prescs = load(DB_PRESC_KEY)
+      const container=document.getElementById('prescriptionsList')
+      container.innerHTML=''
+      if(prescs.length===0){
+        container.innerHTML='<p class="muted">No prescriptions available</p>'
+        return
+      }
+      
+      // Separate pending and dispensed
+      const pending = prescs.filter(p=>!p.dispensed)
+      const dispensed = prescs.filter(p=>p.dispensed)
+
+      if(pending.length > 0){
+        const div = document.createElement('div')
+        div.innerHTML='<h4 style="color:#856404">⏳ Pending Dispensing</h4>'
+        container.appendChild(div)
+        
+        pending.forEach(p=>{
+          const appt = load(DB_APPTS_KEY).find(a=>a.id===p.apptId)
+          const patient = appt ? load(DB_USERS_KEY).find(u=>u.id===appt.patientId) : null
+          const doctor = appt ? load(DB_USERS_KEY).find(u=>u.id===appt.doctorId) : null
+          const rxCard=document.createElement('div')
+          rxCard.className='rx-card'
+          rxCard.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:start">
+              <div style="flex:1">
+                <strong>Patient:</strong> ${patient?patient.name:'(deleted)'}<br>
+                <strong>Doctor:</strong> ${doctor?doctor.name:'(deleted)'}<br>
+                <strong style="color:#d9534f">Date:</strong> ${new Date(p.createdAt).toLocaleDateString()}<br>
+                <p style="margin:8px 0;padding:8px;background:white;border-radius:4px;border-left:3px solid #17a2b8">
+                  <strong>Rx:</strong><br>${p.text}
+                </p>
+                <span class="badge badge-pending">Pending</span>
+              </div>
+              <div>
+                <button class="success" onclick="toggleDispensed('${p.id}')">✓ Mark Dispensed</button>
+              </div>
+            </div>
+          `
+          container.appendChild(rxCard)
+        })
+      }
+
+      if(dispensed.length > 0){
+        const div = document.createElement('div')
+        div.innerHTML='<h4 style="color:#155724;margin-top:20px">✅ Dispensed</h4>'
+        container.appendChild(div)
+        
+        dispensed.forEach(p=>{
+          const appt = load(DB_APPTS_KEY).find(a=>a.id===p.apptId)
+          const patient = appt ? load(DB_USERS_KEY).find(u=>u.id===appt.patientId) : null
+          const doctor = appt ? load(DB_USERS_KEY).find(u=>u.id===appt.doctorId) : null
+          const rxCard=document.createElement('div')
+          rxCard.className='rx-card'
+          rxCard.style.borderLeftColor='#28a745'
+          rxCard.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:start;opacity:0.8">
+              <div style="flex:1">
+                <strong>Patient:</strong> ${patient?patient.name:'(deleted)'}<br>
+                <strong>Doctor:</strong> ${doctor?doctor.name:'(deleted)'}<br>
+                <strong>Date:</strong> ${new Date(p.createdAt).toLocaleDateString()}<br>
+                <p style="margin:8px 0;padding:8px;background:white;border-radius:4px;border-left:3px solid #28a745">
+                  <strong>Rx:</strong><br>${p.text}
+                </p>
+                <span class="badge badge-dispensed">Dispensed</span>
+              </div>
+              <div>
+                <button style="background:#6c757d" onclick="toggleDispensed('${p.id}')">↩️ Undo</button>
+              </div>
+            </div>
+          `
+          container.appendChild(rxCard)
+        })
+      }
+    }
+
+    function toggleDispensed(prescId){
+      const prescs = load(DB_PRESC_KEY)
+      const p = prescs.find(x=>x.id===prescId)
+      if(!p) return
+      p.dispensed = !p.dispensed
+      save(DB_PRESC_KEY, prescs)
+      renderPrescriptions()
+    }
+
+    // Initialize
+    renderPrescriptions()
+  </script>
+</body>
+</html>
