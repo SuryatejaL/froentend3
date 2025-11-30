@@ -1,5 +1,6 @@
 // API utility functions for backend integration
-const API_BASE_URL = 'http://localhost:5000/api'
+// Use environment variable when deployed (CRA exposes env vars prefixed with REACT_APP_)
+const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL && process.env.REACT_APP_API_BASE_URL.replace(/\/$/, '')) || 'http://localhost:5000/api'
 
 const Constants = {
   DB_USERS_KEY: 'users',
