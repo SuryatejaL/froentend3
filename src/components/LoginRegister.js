@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
-import { load, save, uid, findUserByEmail } from '../utils'
-import { Constants } from '../utils'
+import { uid, findUserByEmail, saveUser, Constants } from '../utils-api'
 import RoleSelection from './RoleSelection'
 import PatientLogin from './PatientLogin'
 import DoctorLogin from './DoctorLogin'
@@ -66,7 +65,7 @@ function LoginRegister({ onLogin }) {
     }
   }
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!regName || !regEmail || !regPassword) {
       alert('Please fill all fields')
       return
@@ -87,11 +86,12 @@ function LoginRegister({ onLogin }) {
       alert('Password must contain:\n- At least 8 characters\n- One uppercase letter (A-Z)\n- One lowercase letter (a-z)\n- One number (0-9)\n- One special character (@$!%*?&)')
       return
     }
-    if (findUserByEmail(regEmail)) {
+    const existing = await findUserByEmail(regEmail)
+    if (existing) {
       alert('User with this email already exists')
       return
     }
-    const users = load(Constants.DB_USERS_KEY)
+
     const newUser = {
       id: uid(),
       name: regName,
@@ -99,8 +99,13 @@ function LoginRegister({ onLogin }) {
       password: regPassword,
       role: regRole
     }
-    users.push(newUser)
-    save(Constants.DB_USERS_KEY, users)
+
+    const saved = await saveUser(newUser)
+    if (!saved) {
+      alert('Registration failed — please try again later')
+      return
+    }
+
     alert('Registration successful! You can now login.')
     setRegName('')
     setRegEmail('')

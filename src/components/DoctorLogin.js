@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
-import { load, setCurrentUser } from '../utils'
-import { Constants } from '../utils'
+import { loadUsers, setCurrentUser } from '../utils-api'
 
 function DoctorLogin({ onLoginSuccess, onSwitchRole }) {
   const [email, setEmail] = useState('')
@@ -11,15 +10,16 @@ function DoctorLogin({ onLoginSuccess, onSwitchRole }) {
       alert('Please fill email and password')
       return
     }
-    const user = load(Constants.DB_USERS_KEY).find(
-      u => u.email === email && u.password === password && u.role === 'doctor'
-    )
-    if (!user) {
-      alert('Invalid email or password')
-      return
-    }
-    setCurrentUser(user)
-    onLoginSuccess(user)
+    ;(async () => {
+      const users = await loadUsers()
+      const user = users.find(u => u.email === email && u.password === password && u.role === 'doctor')
+      if (!user) {
+        alert('Invalid email or password')
+        return
+      }
+      setCurrentUser(user)
+      onLoginSuccess(user)
+    })()
   }
 
   return (
